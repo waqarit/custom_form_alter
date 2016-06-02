@@ -1,0 +1,85 @@
+<?php
+/**
+* Implements hook_form_alter().
+*/
+
+function custom_form_alter_menu (){
+	$item['child/terms/values'] = array(
+	  'title' => 'Expose Dishes',
+      'Description' => 'Country related dishes',
+	  'page callback' => 'child_terms_callback',
+          'delivery callback' => 'drupal_json_output',
+          'access arguments' => TRUE,
+          'access callback' => TRUE,
+          'type' => MENU_CALLBACK,
+	);
+	
+	return $item;
+}
+
+function custom_form_alter_form_views_exposed_form_alter(&$form, &$form_state) {
+
+  if ($form['#id'] == 'views-exposed-form-cates-page-1') {
+	  dsm($form_state);
+	  
+	$path = drupal_get_path('module', 'custom_form_alter') . '/';
+	drupal_add_js($path . 'custom_form_alter.js');
+	
+	$vid = 5; // vocabulary id.
+	$parent_terms = taxonomy_get_tree($vid, $parent = 0, $max_depth = 1);
+	$parent_options = array('All' => '- Any -');
+	$child_options = array('All' => '- Any -');
+	
+	foreach ($parent_terms as $parent){
+		$parent_options[$parent->tid] = $parent->name; 
+	}
+	
+	foreach ($parent_terms as $parent){
+		$child_terms = taxonomy_get_children($parent->tid, $vid);
+		foreach ($child_terms as $child){
+			$child_options[$child->tid] = $child->name; 
+		}
+	}
+
+	
+	$form['term_node_tid_depth_b']['#options'] = $parent_options;
+	$form['term_node_tid_depth_b1']['#options'] = $child_options;
+	$form['term_node_tid_depth_b']['#description'] = t('');
+	$form['term_node_tid_depth_b1']['#description'] = t('');
+
+	dsm($form);
+  }
+}
+ 
+ /*
+ *
+ * @return renderable array (the second dropdown)
+ */
+function child_terms_callback($form, $form_state) {
+	
+	$html .= "<option value='All'>- Any - </option>";
+	$result = $_GET['fnid'];
+	
+	if($result == 'All'){
+		$vid = 5; // vocabulary id.
+		$parent_terms = taxonomy_get_tree($vid, $parent = 0, $max_depth = 1);
+		foreach ($parent_terms as $parent){
+			$child_terms = taxonomy_get_children($parent->tid, $vid);
+			foreach ($child_terms as $child){
+				$html .= "<option value=".$child->tid.">".$child->name."</option>";
+			}
+		}
+	} else {
+		$child_terms = taxonomy_get_children($result, $vid);
+		foreach ($child_terms as $child){
+			$html .= "<option value=".$child->tid.">".$child->name."</option>";
+		}
+	}
+	
+	$html = '<select class="form-select" id="edit-term-node-tid-depth-b1" name="term_node_tid_depth_b1[]" multiple="multiple">'.$html.'</select>';
+	drupal_json_output($html);      
+    drupal_exit();
+   
+}
+
+
